@@ -9,6 +9,7 @@ import android.content.Intent
 import android.net.TrafficStats
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -21,6 +22,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
+import okhttp3.Response
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.NetworkInterface
@@ -34,6 +36,7 @@ class NetflowForegroundService : Service() {
     private var currentServerUrl: String = DEFAULT_SERVER_URL
     private var previousSnapshot: InterfaceSnapshot? = null
     private var previousTimestampMs: Long = 0
+    private var streamState: String = "Disconnected"
 
     override fun onCreate() {
         super.onCreate()
@@ -43,6 +46,7 @@ class NetflowForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_STOP -> {
+                broadcastState("Disconnected", currentServerUrl, null)
                 stopStreaming()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
@@ -53,6 +57,7 @@ class NetflowForegroundService : Service() {
                     ?.takeIf { it.isNotBlank() }
                     ?: DEFAULT_SERVER_URL
                 startForeground(NOTIFICATION_ID, buildNotification("Connecting to $currentServerUrl"))
+                broadcastState("Connecting", currentServerUrl, null)
                 startStreaming()
             }
         }
@@ -80,6 +85,7 @@ class NetflowForegroundService : Service() {
             while (isActive) {
                 val payload = collectTelemetryPayload()
                 webSocket?.send(payload.toString())
+                broadcastState(streamState, currentServerUrl, System.currentTimeMillis())
                 updateNotification("Streaming to $currentServerUrl")
                 delay(SAMPLE_INTERVAL_MS)
             }
@@ -95,10 +101,32 @@ class NetflowForegroundService : Service() {
 
     private fun connectWebSocket() {
         webSocket?.cancel()
-        val request = Request.Builder()
-            .url(currentServerUrl)
-            .build()
-        webSocket = httpClient.newWebSocket(request, object : WebSocketListener() {})
+        try {
+            val request = Request.Builder()
+                .url(currentServerUrl)
+                .build()
+            webSocket = httpClient.newWebSocket(request, object : WebSocketListener() {
+                override fun onOpen(webSocket: WebSocket, response: Response) {
+                    streamState = "Streaming"
+                    broadcastState(streamState, currentServerUrl, System.currentTimeMillis())
+                }
+
+                override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                    streamState = "Disconnected"
+                    broadcastState(streamState, currentServerUrl, null)
+                }
+
+                override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                    Log.w("AndroidSeeNetflow", "WebSocket failure", t)
+                    streamState = "Disconnected"
+                    broadcastState(streamState, currentServerUrl, null)
+                }
+            })
+        } catch (error: IllegalArgumentException) {
+            Log.w("AndroidSeeNetflow", "Invalid server URL: $currentServerUrl", error)
+            streamState = "Invalid URL"
+            broadcastState(streamState, currentServerUrl, null)
+        }
     }
 
     private fun collectTelemetryPayload(): JSONObject {
@@ -184,6 +212,18 @@ class NetflowForegroundService : Service() {
         manager.createNotificationChannel(channel)
     }
 
+    private fun broadcastState(state: String, serverUrl: String, lastSentAt: Long?) {
+        val intent = Intent(ACTION_STATUS).apply {
+            setPackage(packageName)
+            putExtra(EXTRA_STATUS, state)
+            putExtra(EXTRA_SERVER_URL, serverUrl)
+            if (lastSentAt != null) {
+                putExtra(EXTRA_LAST_SENT_AT, lastSentAt)
+            }
+        }
+        sendBroadcast(intent)
+    }
+
     data class InterfaceSnapshot(
         val rxBytes: Long,
         val txBytes: Long,
@@ -193,7 +233,10 @@ class NetflowForegroundService : Service() {
     companion object {
         const val ACTION_START = "com.vincentzyu.androidseenetflow.action.START"
         const val ACTION_STOP = "com.vincentzyu.androidseenetflow.action.STOP"
+        const val ACTION_STATUS = "com.vincentzyu.androidseenetflow.action.STATUS"
         const val EXTRA_SERVER_URL = "server_url"
+        const val EXTRA_STATUS = "status"
+        const val EXTRA_LAST_SENT_AT = "last_sent_at"
 
         private const val CHANNEL_ID = "netflow_service"
         private const val NOTIFICATION_ID = 1001

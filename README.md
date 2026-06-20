@@ -2,8 +2,8 @@
 
 局域网内查看 Android 设备网卡流量的实验项目。
 
-[![Rust](https://img.shields.io/badge/Rust-core-000000?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
-[![Kotlin](https://img.shields.io/badge/Kotlin-android-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
+[![Rust](https://img.shields.io/static/v1?label=Rust&message=Core%20Backend&labelColor=5c5c5c&color=DEA584&style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
+[![Kotlin](https://img.shields.io/static/v1?label=Kotlin&message=Android%20GUI&labelColor=5c5c5c&color=7F52FF&style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
 
 [![Last Commit](https://img.shields.io/github/last-commit/VincentZyuApps/android-see-netflow?style=flat-square&logo=github&color=181717&logoColor=white)](https://github.com/VincentZyuApps/android-see-netflow/commits/main/)
 [![Build](https://img.shields.io/github/actions/workflow/status/VincentZyuApps/android-see-netflow/build-android.yml?style=flat-square&logo=githubactions&logoColor=white&label=build)](https://github.com/VincentZyuApps/android-see-netflow/actions)

@@ -88,7 +88,7 @@ jobs:
     env:
       APP_VERSION_NAME: ${{ needs.check-commit.outputs.version_name }}
       APP_VERSION_CODE: ${{ github.run_number }}
-      APP_SIGNING_STORE_FILE: ${{ runner.temp }}/android-debug.keystore
+      APP_SIGNING_STORE_FILE: ${{ github.workspace }}/.ci/android-debug.keystore
       APP_SIGNING_STORE_PASSWORD: android
       APP_SIGNING_KEY_ALIAS: androiddebugkey
       APP_SIGNING_KEY_PASSWORD: android
@@ -137,6 +137,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
+          mkdir -p "$(dirname "${APP_SIGNING_STORE_FILE}")"
           keytool -genkeypair \
             -keystore "${APP_SIGNING_STORE_FILE}" \
             -storepass "${APP_SIGNING_STORE_PASSWORD}" \

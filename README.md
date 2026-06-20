@@ -2,7 +2,12 @@
 
 局域网内查看 Android 设备网卡流量的实验项目。
 
-[![Build](https://img.shields.io/github/actions/workflow/status/VincentZyuApps/android-see-netflow/build-android.yml?style=for-the-badge&logo=githubactions&logoColor=white&label=Build)](https://github.com/VincentZyuApps/android-see-netflow/actions)
+[![Rust](https://img.shields.io/badge/Rust-core-000000?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
+[![Kotlin](https://img.shields.io/badge/Kotlin-android-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
+
+[![Last Commit](https://img.shields.io/github/last-commit/VincentZyuApps/android-see-netflow?style=flat-square&logo=github&color=181717&logoColor=white)](https://github.com/VincentZyuApps/android-see-netflow/commits/main/)
+[![Build](https://img.shields.io/github/actions/workflow/status/VincentZyuApps/android-see-netflow/build-android.yml?style=flat-square&logo=githubactions&logoColor=white&label=build)](https://github.com/VincentZyuApps/android-see-netflow/actions)
+
 [![Android ARMv7](https://img.shields.io/badge/Android-ARMv7-7CB342?style=for-the-badge&logo=android&logoColor=white)](https://github.com/VincentZyuApps/android-see-netflow/releases)
 [![Android ARM64-v8a](https://img.shields.io/badge/Android-ARM64--v8a-168039?style=for-the-badge&logo=android&logoColor=white)](https://github.com/VincentZyuApps/android-see-netflow/releases)
 [![Android x86_64](https://img.shields.io/badge/Android-x86__64-43A047?style=for-the-badge&logo=android&logoColor=white)](https://github.com/VincentZyuApps/android-see-netflow/releases)

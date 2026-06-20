@@ -18,6 +18,7 @@ import websockets
 
 CONFIG_PATH = Path("config.yaml")
 CONFIG_EXAMPLE_PATH = Path("config.example.yaml")
+STALE_AFTER_SECS = 10.0
 
 
 def load_config() -> dict[str, Any]:
@@ -85,6 +86,10 @@ class DeviceSnapshot:
     def total_tx_bytes(self) -> int:
         return sum(item.tx_bytes for item in self.interfaces)
 
+    @property
+    def primary_interface(self) -> str:
+        return self.interfaces[0].name if self.interfaces else "unknown"
+
 
 class DeviceStore:
     def __init__(self, history_limit: int) -> None:
@@ -93,6 +98,7 @@ class DeviceStore:
         self._lock = asyncio.Lock()
 
     async def upsert(self, payload: dict[str, Any]) -> None:
+        validated = validate_payload(payload)
         interfaces = [
             InterfaceStats(
                 name=str(item.get("name", "")),
@@ -101,27 +107,27 @@ class DeviceStore:
                 rx_rate=int(item.get("rx_rate", 0)),
                 tx_rate=int(item.get("tx_rate", 0)),
             )
-            for item in payload.get("interfaces", [])
+            for item in validated["interfaces"]
         ]
-        device_id = str(payload.get("device_id", "unknown"))
+        device_id = str(validated["device_id"])
         now = time.time()
         async with self._lock:
             snapshot = self._devices.get(device_id)
             if snapshot is None:
                 snapshot = DeviceSnapshot(
                     device_id=device_id,
-                    device_name=str(payload.get("device_name", device_id)),
-                    network_type=str(payload.get("network_type", "unknown")),
-                    timestamp=int(payload.get("timestamp", 0)),
+                    device_name=str(validated["device_name"]),
+                    network_type=str(validated["network_type"]),
+                    timestamp=int(validated["timestamp"]),
                     updated_at=now,
                     interfaces=interfaces,
                     history=deque(maxlen=self.history_limit),
                 )
                 self._devices[device_id] = snapshot
             else:
-                snapshot.device_name = str(payload.get("device_name", snapshot.device_name))
-                snapshot.network_type = str(payload.get("network_type", snapshot.network_type))
-                snapshot.timestamp = int(payload.get("timestamp", snapshot.timestamp))
+                snapshot.device_name = str(validated["device_name"])
+                snapshot.network_type = str(validated["network_type"])
+                snapshot.timestamp = int(validated["timestamp"])
                 snapshot.updated_at = now
                 snapshot.interfaces = interfaces
 
@@ -137,6 +143,45 @@ class DeviceStore:
         async with self._lock:
             devices = list(self._devices.values())
         return sorted(devices, key=lambda item: item.device_name.lower())
+
+
+def validate_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    interfaces = payload.get("interfaces")
+    if not isinstance(interfaces, list) or not interfaces:
+        raise ValueError("payload.interfaces must be a non-empty list")
+
+    device_id = str(payload.get("device_id", "")).strip()
+    device_name = str(payload.get("device_name", "")).strip()
+    network_type = str(payload.get("network_type", "unknown")).strip() or "unknown"
+    timestamp = int(payload.get("timestamp", 0))
+
+    if not device_id:
+        raise ValueError("payload.device_id is required")
+    if not device_name:
+        device_name = device_id
+
+    normalized_interfaces: list[dict[str, Any]] = []
+    for item in interfaces:
+        if not isinstance(item, dict):
+            raise ValueError("payload.interfaces entries must be objects")
+        name = str(item.get("name", "")).strip() or "unknown"
+        normalized_interfaces.append(
+            {
+                "name": name,
+                "rx_bytes": int(item.get("rx_bytes", 0)),
+                "tx_bytes": int(item.get("tx_bytes", 0)),
+                "rx_rate": int(item.get("rx_rate", 0)),
+                "tx_rate": int(item.get("tx_rate", 0)),
+            }
+        )
+
+    return {
+        "device_id": device_id,
+        "device_name": device_name,
+        "network_type": network_type,
+        "timestamp": timestamp,
+        "interfaces": normalized_interfaces,
+    }
 
 
 class SummaryPanel(Static):
@@ -185,11 +230,12 @@ class NetflowApp(App[None]):
         table.add_columns(
             "Device",
             "Network",
+            "Interface",
             "RX Rate",
             "TX Rate",
             "RX Total",
             "TX Total",
-            "Updated",
+            "State",
         )
         self.set_interval(self.refresh_interval, self.refresh_data)
 
@@ -204,14 +250,16 @@ class NetflowApp(App[None]):
             total_rx += device.total_rx_rate
             total_tx += device.total_tx_rate
             age = max(0.0, time.time() - device.updated_at)
+            state = "stale" if age > STALE_AFTER_SECS else f"{age:,.1f}s ago"
             table.add_row(
                 device.device_name,
                 device.network_type,
+                device.primary_interface,
                 format_rate(device.total_rx_rate),
                 format_rate(device.total_tx_rate),
                 format_bytes(device.total_rx_bytes),
                 format_bytes(device.total_tx_bytes),
-                f"{age:,.1f}s ago",
+                state,
             )
 
         summary = self.query_one(SummaryPanel)
@@ -220,6 +268,7 @@ class NetflowApp(App[None]):
             f"Connected devices: {len(devices)}\n"
             f"Aggregate RX: {format_rate(total_rx)}\n"
             f"Aggregate TX: {format_rate(total_tx)}\n"
+            f"Stale threshold: {STALE_AFTER_SECS:.0f}s\n"
             f"Config: {CONFIG_PATH.resolve()}"
         )
 
@@ -232,7 +281,10 @@ async def websocket_handler(store: DeviceStore, websocket: websockets.WebSocketS
             continue
         if not isinstance(payload, dict):
             continue
-        await store.upsert(payload)
+        try:
+            await store.upsert(payload)
+        except ValueError:
+            continue
 
 
 async def start_websocket_server(store: DeviceStore, host: str, port: int) -> websockets.server.Serve:

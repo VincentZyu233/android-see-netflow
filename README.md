@@ -22,26 +22,29 @@
   - 负责监听 WebSocket、接收设备遥测数据、在终端里展示
 - `client/`
   - Android 客户端
-  - 计划使用 `Kotlin + Rust`
+  - 使用 `Kotlin + Rust`
   - Kotlin 负责 Android 生命周期、前台服务、权限和联网
-  - Rust 负责采样核心和协议数据生成
+  - Rust 目前提供 JNI 桥骨架，后续继续下沉采样核心与协议逻辑
 
 ## 当前状态
 
-现在仓库已经完成第一版骨架：
+现在仓库已经完成第一版可运行 MVP：
 
 - `server/main.py`
   - 启动时强制检查 `config.yaml`
   - 如果没找到，会直接报错，并提示用户从 `config.example.yaml` 复制
   - 启动 WebSocket 服务并打开 Textual TUI
+  - 会展示设备名、主接口、实时上下行、累计流量和在线状态
 - `server/mock_client.py`
   - 本机模拟一个 Android 设备持续发送测试流量数据
 - `client/android/`
-  - Android 工程骨架
-  - 含 `MainActivity` 和前台服务占位
+  - Kotlin 版 Android MVP 已可运行
+  - `MainActivity` 可输入 WebSocket 服务端地址并启动/停止前台服务
+  - 前台服务会使用 `TrafficStats` 采集总上下行并通过 WebSocket 持续上报
 - `client/rust-core/`
-  - Rust 核心占位
-  - 目前先生成示例 telemetry JSON
+  - Rust 核心已增加最小 JNI 导出函数
+  - CI 现在会尝试编译 Android `.so` 并打进 APK
+  - 目前仍未接入真实采样链路
 
 ## CI / Release
 
@@ -87,6 +90,12 @@ Release 模板位于：
 python .\scripts\bump.py x.y.z
 ```
 
+Rust Android JNI 库可通过脚本单独构建：
+
+```powershell
+python .\scripts\build_android_rust.py
+```
+
 ## 目录结构
 
 ```text
@@ -101,6 +110,7 @@ android-see-netflow/
     android/
     protocol/
     rust-core/
+  scripts/
 ```
 
 ## 服务端用法
@@ -147,23 +157,27 @@ ws://0.0.0.0:8765
 
 ## 客户端说明
 
-`client/` 目前还是第一版工程骨架，还没有接上真实 Android 采样与 WebSocket 上报。
+`client/` 现在已经具备 Kotlin 侧的最短链路 MVP，但 Rust core 和 JNI 还未接入真实采样路径。
 
 当前已有内容：
 
 - `client/android/`
-  - Android Studio 可继续接着完善
+  - 可输入 `ws://<server-ip>:8765`
+  - 可启动/停止前台服务
+  - 使用 `TrafficStats` 采集总上下行
+  - 使用 OkHttp WebSocket 持续上报 JSON
 - `client/protocol/telemetry.md`
   - 约定了服务端与客户端之间的 JSON 消息格式
 - `client/rust-core/`
-  - 预留 Rust 动态库核心
+  - 已增加最小 JNI 桥接函数
+  - CI 会尝试构建 `.so` 并打进 APK
 
 后续准备继续完成：
 
-1. Android 前台服务中真实采集网卡流量
-2. Kotlin 连接 WebSocket 并向服务端持续上报
-3. Rust 与 Kotlin 之间的 JNI 集成
-4. 视情况把更多采样逻辑下沉到 Rust
+1. Rust 与 Kotlin 之间的 JNI 调用接入真实链路
+2. 服务端增加更强的设备管理和历史存储
+3. 视情况把更多采样逻辑下沉到 Rust
+4. 梳理本地 Android Rust 构建体验
 
 ## 配置约定
 
@@ -212,6 +226,13 @@ server/config.example.yaml
 - `timestamp`: Unix 毫秒时间戳
 - `rx_rate` / `tx_rate`: 每秒字节数
 - `interfaces`: 后续可同时包含 `wlan0`、蜂窝网卡等接口
+
+## 当前限制
+
+- 当前 Android 侧真实采样仍然主要使用 Kotlin + `TrafficStats`，不是 Rust core。
+- 当前统计更接近“设备总上下行”的 MVP，不是完整的多接口精细采样器。
+- 当前 CI 会使用临时 debug keystore 给 release APK 签名。
+- 由于每次 CI 生成的 debug keystore 都不同，用户升级新版本前通常需要先卸载旧版本。
 
 ## 说明
 

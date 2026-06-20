@@ -21,6 +21,6 @@
 
 ## 当前范围
 
-- 目前主要包含 Android 客户端工程骨架。
-- 服务端仍位于仓库中的 `server/`，由 Python + Textual 实现。
-- 后续版本会继续补齐 Android 真实采样、WebSocket 上报与 Rust/Kotlin 集成。
+- Android 客户端已具备 Kotlin 侧 MVP：可输入 WebSocket 服务端地址，并通过前台服务持续上报 `TrafficStats` 采样结果。
+- 服务端位于仓库中的 `server/`，由 Python + Textual 实现，已可展示真实设备的实时流量与在线状态。
+- Rust core 已增加最小 JNI 导出函数，并补入 Android `.so` 构建/打包链路；后续继续完善真实接线与逻辑下沉。

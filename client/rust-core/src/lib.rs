@@ -1,3 +1,6 @@
+use jni::objects::JClass;
+use jni::sys::jstring;
+use jni::JNIEnv;
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -33,4 +36,15 @@ pub fn sample_payload() -> String {
         }],
     };
     serde_json::to_string(&frame).expect("serialize telemetry frame")
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_vincentzyu_androidseenetflow_RustBridge_stringFromRust(
+    mut env: JNIEnv,
+    _class: JClass,
+) -> jstring {
+    let value = sample_payload();
+    env.new_string(value)
+        .expect("create JNI string")
+        .into_raw()
 }

@@ -2,6 +2,12 @@
 
 局域网内查看 Android 设备网卡流量的实验项目。
 
+[![Build](https://img.shields.io/github/actions/workflow/status/VincentZyuApps/android-see-netflow/build-android.yml?style=for-the-badge&logo=githubactions&logoColor=white&label=Build)](https://github.com/VincentZyuApps/android-see-netflow/actions)
+[![Android ARMv7](https://img.shields.io/badge/Android-ARMv7-7CB342?style=for-the-badge&logo=android&logoColor=white)](https://github.com/VincentZyuApps/android-see-netflow/releases)
+[![Android ARM64-v8a](https://img.shields.io/badge/Android-ARM64--v8a-168039?style=for-the-badge&logo=android&logoColor=white)](https://github.com/VincentZyuApps/android-see-netflow/releases)
+[![Android x86_64](https://img.shields.io/badge/Android-x86__64-43A047?style=for-the-badge&logo=android&logoColor=white)](https://github.com/VincentZyuApps/android-see-netflow/releases)
+[![Android Universal](https://img.shields.io/badge/Android-Universal-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/VincentZyuApps/android-see-netflow/releases)
+
 当前设计分为两部分：
 
 - `server/`
@@ -29,6 +35,44 @@
 - `client/rust-core/`
   - Rust 核心占位
   - 目前先生成示例 telemetry JSON
+
+## CI / Release
+
+仓库已增加 GitHub Actions workflow：
+
+- `.github/workflows/build-android.yml`
+
+当前目标：
+
+- 在 GitHub Actions 上构建 Android release APK
+- 产出以下 4 个包：
+  - `ARMv7 (armeabi-v7a)`
+  - `ARM64-v8a (arm64-v8a)`
+  - `x86_64`
+  - `universal`
+- APK 文件名直接带版本号与架构，例如：
+  - `android-see-netflow-android-armeabi-v7a-v0.1.0.apk`
+  - `android-see-netflow-android-arm64-v8a-v0.1.0.apk`
+  - `android-see-netflow-android-x86_64-v0.1.0.apk`
+  - `android-see-netflow-android-universal-v0.1.0.apk`
+- 如果是 GitHub Release 事件，会自动渲染 release notes 并上传 APK
+
+Release 模板位于：
+
+- `.github/release_template.md`
+
+当前 workflow 触发策略参考了 `dart-flutter-demo` 的思路：
+
+- `push` 到 `main` 时：
+  - commit message 包含 `build action` -> 只构建并上传 CI artifact
+  - commit message 包含 `build release` -> 构建，并进入 release 发布阶段
+  - 其他 commit -> 跳过构建
+- `pull_request`
+  - 默认会构建并上传 artifact，但不会发布 release
+- `workflow_dispatch`
+  - 默认会构建并上传 artifact，但不会发布 release
+- `release`
+  - 会构建并上传 GitHub Release 资产
 
 ## 目录结构
 

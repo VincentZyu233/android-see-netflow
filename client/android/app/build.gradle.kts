@@ -3,6 +3,11 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+import com.android.build.api.variant.FilterConfiguration
+
+val appVersionName = providers.gradleProperty("APP_VERSION_NAME").orElse("0.1.0")
+val appVersionCode = providers.gradleProperty("APP_VERSION_CODE").orElse("1")
+
 android {
     namespace = "com.vincentzyu.androidseenetflow"
     compileSdk = 34
@@ -11,8 +16,8 @@ android {
         applicationId = "com.vincentzyu.androidseenetflow"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = appVersionCode.get().toInt()
+        versionName = appVersionName.get()
     }
 
     buildTypes {
@@ -36,6 +41,29 @@ android {
 
     buildFeatures {
         viewBinding = true
+    }
+
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a", "x86_64")
+            isUniversalApk = true
+        }
+    }
+}
+
+androidComponents {
+    onVariants { variant ->
+        variant.outputs.forEach { output ->
+            val abiFilter = output.filters
+                .find { it.filterType == FilterConfiguration.FilterType.ABI }
+                ?.identifier
+                ?: "universal"
+            output.outputFileName.set(
+                "android-see-netflow-android-${abiFilter}-v${appVersionName.get()}.apk"
+            )
+        }
     }
 }
 

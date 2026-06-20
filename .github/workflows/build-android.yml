@@ -1,0 +1,196 @@
+name: build-android
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: write
+
+jobs:
+  check-commit:
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+      should_release: ${{ steps.check.outputs.should_release }}
+      version_name: ${{ steps.version.outputs.version_name }}
+      commit_subject: ${{ steps.commit.outputs.commit_subject }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read commit subject
+        id: commit
+        shell: bash
+        run: |
+          set -euxo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            COMMIT_SUBJECT="${{ github.event.pull_request.title }}"
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            COMMIT_SUBJECT="release event"
+          else
+            COMMIT_SUBJECT="${{ github.event.head_commit.message }}"
+          fi
+          COMMIT_SUBJECT="${COMMIT_SUBJECT%%$'\n'*}"
+          echo "commit_subject=${COMMIT_SUBJECT}" >> "$GITHUB_OUTPUT"
+
+      - name: Check trigger mode
+        id: check
+        shell: bash
+        run: |
+          set -euxo pipefail
+          EVENT_NAME="${{ github.event_name }}"
+          COMMIT_SUBJECT="${{ steps.commit.outputs.commit_subject }}"
+          SHOULD_BUILD=false
+          SHOULD_RELEASE=false
+
+          if [ "$EVENT_NAME" = "release" ]; then
+            SHOULD_BUILD=true
+            SHOULD_RELEASE=true
+          elif [ "$EVENT_NAME" = "pull_request" ] || [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            SHOULD_BUILD=true
+          elif echo "$COMMIT_SUBJECT" | grep -qiE "(build action|build release)"; then
+            SHOULD_BUILD=true
+            if echo "$COMMIT_SUBJECT" | grep -qi "build release"; then
+              SHOULD_RELEASE=true
+            fi
+          fi
+
+          echo "should_build=${SHOULD_BUILD}" >> "$GITHUB_OUTPUT"
+          echo "should_release=${SHOULD_RELEASE}" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          set -euxo pipefail
+          if [ "${{ github.event_name }}" = "release" ]; then
+            VERSION_NAME="${GITHUB_REF_NAME#v}"
+          else
+            VERSION_NAME="0.1.0-dev.${{ github.run_number }}"
+          fi
+          echo "version_name=${VERSION_NAME}" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: check-commit
+    if: needs.check-commit.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    env:
+      APP_VERSION_NAME: ${{ needs.check-commit.outputs.version_name }}
+      APP_VERSION_CODE: ${{ github.run_number }}
+    defaults:
+      run:
+        working-directory: client/android
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Build release APKs
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./gradlew assembleRelease \
+            -PAPP_VERSION_NAME="${APP_VERSION_NAME}" \
+            -PAPP_VERSION_CODE="${APP_VERSION_CODE}"
+
+      - name: Verify APK outputs
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ls -lah app/build/outputs/apk/release/
+          test -f "app/build/outputs/apk/release/android-see-netflow-android-armeabi-v7a-v${APP_VERSION_NAME}.apk"
+          test -f "app/build/outputs/apk/release/android-see-netflow-android-arm64-v8a-v${APP_VERSION_NAME}.apk"
+          test -f "app/build/outputs/apk/release/android-see-netflow-android-x86_64-v${APP_VERSION_NAME}.apk"
+          test -f "app/build/outputs/apk/release/android-see-netflow-android-universal-v${APP_VERSION_NAME}.apk"
+
+      - name: Collect artifacts
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p ../../artifacts
+          cp "app/build/outputs/apk/release/android-see-netflow-android-armeabi-v7a-v${APP_VERSION_NAME}.apk" ../../artifacts/
+          cp "app/build/outputs/apk/release/android-see-netflow-android-arm64-v8a-v${APP_VERSION_NAME}.apk" ../../artifacts/
+          cp "app/build/outputs/apk/release/android-see-netflow-android-x86_64-v${APP_VERSION_NAME}.apk" ../../artifacts/
+          cp "app/build/outputs/apk/release/android-see-netflow-android-universal-v${APP_VERSION_NAME}.apk" ../../artifacts/
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-see-netflow-android-apks
+          path: artifacts/*
+
+  publish-release:
+    needs:
+      - check-commit
+      - build
+    if: needs.check-commit.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android-see-netflow-android-apks
+          path: artifacts
+
+      - name: Prepare release assets
+        shell: bash
+        run: |
+          set -euxo pipefail
+          VERSION="${{ needs.check-commit.outputs.version_name }}"
+          mkdir -p release-assets
+          cp "artifacts/android-see-netflow-android-armeabi-v7a-v${VERSION}.apk" release-assets/
+          cp "artifacts/android-see-netflow-android-arm64-v8a-v${VERSION}.apk" release-assets/
+          cp "artifacts/android-see-netflow-android-x86_64-v${VERSION}.apk" release-assets/
+          cp "artifacts/android-see-netflow-android-universal-v${VERSION}.apk" release-assets/
+
+      - name: Render release template
+        shell: bash
+        run: |
+          set -euxo pipefail
+          VERSION="${{ needs.check-commit.outputs.version_name }}"
+          REPO="${GITHUB_REPOSITORY}"
+          BASE_URL="https://github.com/${REPO}/releases/download/v${VERSION}"
+          COMMIT="${{ github.sha }}"
+          sed \
+            -e "s|__VERSION__|${VERSION}|g" \
+            -e "s|__BASE_URL__|${BASE_URL}|g" \
+            -e "s|__COMMIT__|${COMMIT}|g" \
+            .github/release_template.md > release-notes.md
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.check-commit.outputs.version_name }}
+          body_path: release-notes.md
+          files: |
+            release-assets/android-see-netflow-android-armeabi-v7a-v*.apk
+            release-assets/android-see-netflow-android-arm64-v8a-v*.apk
+            release-assets/android-see-netflow-android-x86_64-v*.apk
+            release-assets/android-see-netflow-android-universal-v*.apk

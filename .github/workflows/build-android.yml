@@ -71,11 +71,14 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
+          BASE_VERSION=$(grep '^version = "' client/rust-core/Cargo.toml | head -1 | sed -E 's/^version = "([^"]+)"$/\1/')
           if [ "${{ github.event_name }}" = "release" ]; then
             VERSION_NAME="${GITHUB_REF_NAME#v}"
           else
-            VERSION_NAME="0.1.0-dev.${{ github.run_number }}"
+            VERSION_NAME="${BASE_VERSION}"
           fi
+          echo "Resolved base version: ${BASE_VERSION}"
+          echo "Resolved build version: ${VERSION_NAME}"
           echo "version_name=${VERSION_NAME}" >> "$GITHUB_OUTPUT"
 
   build-artifact:

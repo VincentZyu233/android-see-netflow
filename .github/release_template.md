@@ -6,7 +6,7 @@
 
 | 平台 / 架构 | ARMv7 | ARM64-v8a | x86_64 | Universal |
 |------|------|------|------|------|
-| **Android** | [![android-armv7](https://img.shields.io/badge/android-ARMv7.apk-7CB342.svg?logo=android)](__BASE_URL__/android-see-netflow-android-armeabi-v7a-v__VERSION__.apk) | [![android-arm64-v8a](https://img.shields.io/badge/android-ARM64--v8a.apk-168039.svg?logo=android)](__BASE_URL__/android-see-netflow-android-arm64-v8a-v__VERSION__.apk) | [![android-x86_64](https://img.shields.io/badge/android-x86__64.apk-43A047.svg?logo=android)](__BASE_URL__/android-see-netflow-android-x86_64-v__VERSION__.apk) | [![android-universal](https://img.shields.io/badge/android-universal.apk-3DDC84.svg?logo=android)](__BASE_URL__/android-see-netflow-android-universal-v__VERSION__.apk) |
+| **Android** | [![android-armv7](https://img.shields.io/badge/android-ARMv7.apk-7CB342.svg?logo=android)](__BASE_URL__/android-see-netflow-armeabi-v7a-v__VERSION__.apk) | [![android-arm64-v8a](https://img.shields.io/badge/android-ARM64--v8a.apk-168039.svg?logo=android)](__BASE_URL__/android-see-netflow-arm64-v8a-v__VERSION__.apk) | [![android-x86_64](https://img.shields.io/badge/android-x86__64.apk-43A047.svg?logo=android)](__BASE_URL__/android-see-netflow-x86_64-v__VERSION__.apk) | [![android-universal](https://img.shields.io/badge/android-universal.apk-3DDC84.svg?logo=android)](__BASE_URL__/android-see-netflow-universal-v__VERSION__.apk) |
 
 ## 说明
 

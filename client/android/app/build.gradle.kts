@@ -3,7 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-val appVersionName = providers.gradleProperty("APP_VERSION_NAME").orElse("0.1.0")
+val appVersionName = providers.gradleProperty("APP_VERSION_NAME").orElse("0.1.1")
 val appVersionCode = providers.gradleProperty("APP_VERSION_CODE").orElse("1")
 
 android {

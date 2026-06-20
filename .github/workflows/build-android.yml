@@ -131,10 +131,10 @@ jobs:
         run: |
           set -euxo pipefail
           mkdir -p ../../artifacts
-          cp "app/build/outputs/apk/release/app-armeabi-v7a-release-unsigned.apk" "../../artifacts/android-see-netflow-android-armeabi-v7a-v${APP_VERSION_NAME}.apk"
-          cp "app/build/outputs/apk/release/app-arm64-v8a-release-unsigned.apk" "../../artifacts/android-see-netflow-android-arm64-v8a-v${APP_VERSION_NAME}.apk"
-          cp "app/build/outputs/apk/release/app-x86_64-release-unsigned.apk" "../../artifacts/android-see-netflow-android-x86_64-v${APP_VERSION_NAME}.apk"
-          cp "app/build/outputs/apk/release/app-universal-release-unsigned.apk" "../../artifacts/android-see-netflow-android-universal-v${APP_VERSION_NAME}.apk"
+          cp "app/build/outputs/apk/release/app-armeabi-v7a-release-unsigned.apk" "../../artifacts/android-see-netflow-armeabi-v7a-v${APP_VERSION_NAME}.apk"
+          cp "app/build/outputs/apk/release/app-arm64-v8a-release-unsigned.apk" "../../artifacts/android-see-netflow-arm64-v8a-v${APP_VERSION_NAME}.apk"
+          cp "app/build/outputs/apk/release/app-x86_64-release-unsigned.apk" "../../artifacts/android-see-netflow-x86_64-v${APP_VERSION_NAME}.apk"
+          cp "app/build/outputs/apk/release/app-universal-release-unsigned.apk" "../../artifacts/android-see-netflow-universal-v${APP_VERSION_NAME}.apk"
 
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4
@@ -165,10 +165,10 @@ jobs:
           set -euxo pipefail
           VERSION="${{ needs.check-commit.outputs.version_name }}"
           mkdir -p release-assets
-          cp "artifacts/android-see-netflow-android-armeabi-v7a-v${VERSION}.apk" release-assets/
-          cp "artifacts/android-see-netflow-android-arm64-v8a-v${VERSION}.apk" release-assets/
-          cp "artifacts/android-see-netflow-android-x86_64-v${VERSION}.apk" release-assets/
-          cp "artifacts/android-see-netflow-android-universal-v${VERSION}.apk" release-assets/
+          cp "artifacts/android-see-netflow-armeabi-v7a-v${VERSION}.apk" release-assets/
+          cp "artifacts/android-see-netflow-arm64-v8a-v${VERSION}.apk" release-assets/
+          cp "artifacts/android-see-netflow-x86_64-v${VERSION}.apk" release-assets/
+          cp "artifacts/android-see-netflow-universal-v${VERSION}.apk" release-assets/
 
       - name: Render release template
         shell: bash
@@ -190,7 +190,7 @@ jobs:
           tag_name: v${{ needs.check-commit.outputs.version_name }}
           body_path: release-notes.md
           files: |
-            release-assets/android-see-netflow-android-armeabi-v7a-v*.apk
-            release-assets/android-see-netflow-android-arm64-v8a-v*.apk
-            release-assets/android-see-netflow-android-x86_64-v*.apk
-            release-assets/android-see-netflow-android-universal-v*.apk
+            release-assets/android-see-netflow-armeabi-v7a-v*.apk
+            release-assets/android-see-netflow-arm64-v8a-v*.apk
+            release-assets/android-see-netflow-x86_64-v*.apk
+            release-assets/android-see-netflow-universal-v*.apk

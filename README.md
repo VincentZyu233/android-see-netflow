@@ -58,10 +58,10 @@
   - `x86_64`
   - `universal`
 - APK 文件名直接带版本号与架构，例如：
-  - `android-see-netflow-android-armeabi-v7a-v0.1.0.apk`
-  - `android-see-netflow-android-arm64-v8a-v0.1.0.apk`
-  - `android-see-netflow-android-x86_64-v0.1.0.apk`
-  - `android-see-netflow-android-universal-v0.1.0.apk`
+  - `android-see-netflow-armeabi-v7a-vx.y.z.apk`
+  - `android-see-netflow-arm64-v8a-vx.y.z.apk`
+  - `android-see-netflow-x86_64-vx.y.z.apk`
+  - `android-see-netflow-universal-vx.y.z.apk`
 - 如果是 GitHub Release 事件，会自动渲染 release notes 并上传 APK
 
 Release 模板位于：
@@ -80,6 +80,12 @@ Release 模板位于：
   - 默认会构建并上传 artifact，但不会发布 release
 - `release`
   - 会构建并上传 GitHub Release 资产
+
+版本号默认值可通过脚本一键更新：
+
+```powershell
+python .\scripts\bump.py x.y.z
+```
 
 ## 目录结构
 
